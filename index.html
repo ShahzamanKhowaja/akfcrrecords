@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Doctor Records</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #ff4444;
+        }
+        .records-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .records-table th, .records-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .records-table th {
+            background-color: #f4f4f4;
+        }
+        .total {
+            margin-top: 20px;
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .login-container {
+            text-align: center;
+            margin-top: 50px;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px;
+        }
+        button {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #cc0000;
+        }
+    </style>
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+    <div id="loginContainer" class="login-container">
+        <h1>Doctor Login</h1>
+        <input type="password" id="password" placeholder="Enter Password">
+        <button onclick="checkPassword()">Login</button>
+    </div>
+
+    <div id="recordsContainer" style="display: none;">
+        <h1>Clinic Records</h1>
+        <div id="recordsTableContainer"></div>
+        <div class="total">
+            Total Sum: Rs. <span id="totalSum">0.00</span>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCar7567mgU3soJoai4AQzhd8vBqjSF87E",
+            authDomain: "clinic-app-cfaca.firebaseapp.com",
+            databaseURL: "https://clinic-app-cfaca-default-rtdb.firebaseio.com",
+            projectId: "clinic-app-cfaca",
+            storageBucket: "clinic-app-cfaca.firebasestorage.app",
+            messagingSenderId: "833319071101",
+            appId: "1:833319071101:web:bf31fb433315d84189f014",
+            measurementId: "G-XQXTVT5LLT"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const DOCTOR_PASSWORD = "doctor123"; // Is ko apna pasandida password se change kar sakte hain
+
+        function checkPassword() {
+            const enteredPassword = document.getElementById("password").value;
+            if (enteredPassword === DOCTOR_PASSWORD) {
+                document.getElementById("loginContainer").style.display = "none";
+                document.getElementById("recordsContainer").style.display = "block";
+                displayRecords();
+            } else {
+                alert("Ghalat password! Sirf doctor ke liye hai.");
+            }
+        }
+
+        function displayRecords() {
+            db.ref('receipts').once('value', (snapshot) => {
+                const records = snapshot.val();
+                if (!records) {
+                    document.getElementById("recordsTableContainer").innerHTML = "<p>Koi record nahi mila.</p>";
+                    document.getElementById("totalSum").textContent = "0.00";
+                    return;
+                }
+
+                let totalSum = 0;
+                const recordsArray = Object.values(records);
+
+                const tableHTML = `
+                    <table class="records-table">
+                        <thead>
+                            <tr>
+                                <th>Receipt #</th>
+                                <th>Date</th>
+                                <th>Patient Name</th>
+                                <th>Services</th>
+                                <th>Total Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${recordsArray.map(record => {
+                                totalSum += record.totalAmount;
+                                return `
+                                    <tr>
+                                        <td>${record.receiptNumber}</td>
+                                        <td>${record.date}</td>
+                                        <td>${record.patientName}</td>
+                                        <td>${record.services.map(s => s.service.replace(/_/g, " ")).join(", ")}</td>
+                                        <td>Rs. ${record.totalAmount.toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }).join("")}
+                        </tbody>
+                    </table>
+                `;
+
+                document.getElementById("recordsTableContainer").innerHTML = tableHTML;
+                document.getElementById("totalSum").textContent = totalSum.toFixed(2);
+            }, (error) => {
+                alert("Records load nahi hue: " + error.message);
+            });
+        }
+    </script>
+</body>
+</html>
